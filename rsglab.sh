@@ -1,7 +1,8 @@
 #!/bin/bash
 
-# Get script directory
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Follow symlinks to find real script location
+SCRIPT_PATH="$(readlink -f "${BASH_SOURCE[0]}")"
+SCRIPT_DIR="$(dirname "$SCRIPT_PATH")"
 MODULES_DIR="$SCRIPT_DIR/modules"
 
 # Source all modules
