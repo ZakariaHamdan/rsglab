@@ -20,14 +20,3 @@ show_zak_banner() {
 EOF
     echo -e "${RESET}"
 }
-
-show_welcome() {
-    clear
-    show_zak_banner
-    echo -e "${GREEN}==================================================${RESET}"
-    echo -e "${YELLOW}${BOLD}        NETWORK LAB TOOLS${RESET}"
-    echo -e "${GREEN}        ALL RIGHTS RESERVED${RESET}"
-    echo -e "${GREEN}==================================================${RESET}\n"
-    echo -e "${YELLOW}Press Enter to continue (auto-continue in 4s)...${RESET}"
-    read -t 4
-}
