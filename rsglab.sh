@@ -1,276 +1,23 @@
 #!/bin/bash
 
-CYAN='\033[96m'
-GREEN='\033[92m'
-YELLOW='\033[93m'
-RED='\033[91m'
-BOLD='\033[1m'
-RESET='\033[0m'
+# Get script directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+MODULES_DIR="$SCRIPT_DIR/modules"
 
-# BIND9 config paths
-BIND_DIR="/etc/bind"
-ZONES_DIR="$BIND_DIR/zones"
-NAMED_CONF="$BIND_DIR/named.conf"
-NAMED_CONF_OPTIONS="$BIND_DIR/named.conf.options"
-NAMED_CONF_LOCAL="$BIND_DIR/named.conf.local"
-NAMED_CONF_DEFAULT="$BIND_DIR/named.conf.default-zones"
-
-show_banner() {
-    clear
-    echo -e "${CYAN}${BOLD}"
-    cat << "EOF"
-  ███████╗ █████╗ ██╗  ██╗
-  ╚══███╔╝██╔══██╗██║ ██╔╝
-    ███╔╝ ███████║█████╔╝ 
-   ███╔╝  ██╔══██║██╔═██╗ 
-  ███████╗██║  ██║██║  ██╗
-  ╚══════╝╚═╝  ╚═╝╚═╝  ╚═╝
-EOF
-    echo -e "${RESET}"
-    echo -e "${GREEN}==================================================${RESET}"
-    echo -e "${YELLOW}${BOLD}        NETWORK LAB TOOLS${RESET}"
-    echo -e "${GREEN}        ALL RIGHTS RESERVED${RESET}"
-    echo -e "${GREEN}==================================================${RESET}\n"
-    echo -e "${YELLOW}Press Enter to continue (auto-continue in 4s)...${RESET}"
-    read -t 4
-}
-
-file_action_menu() {
-    local file_path=$1
-    local file_name=$(basename "$file_path")
-    
-    while true; do
-        clear
-        echo -e "${CYAN}${BOLD}==================================================${RESET}"
-        echo -e "${CYAN}${BOLD}          File: $file_name${RESET}"
-        echo -e "${CYAN}${BOLD}==================================================${RESET}\n"
-        echo -e "${GREEN}[1]${RESET} View with cat"
-        echo -e "${GREEN}[2]${RESET} Edit with vim"
-        echo -e "${GREEN}[3]${RESET} Edit with nano"
-        echo -e "${GREEN}[4]${RESET} Back\n"
-        echo -e "${CYAN}==================================================${RESET}"
-        echo -en "${YELLOW}Select option: ${RESET}"
-        read choice
-        
-        case $choice in
-            1)
-                clear
-                cat "$file_path"
-                echo -e "\n${YELLOW}Press Enter to continue...${RESET}"
-                read
-                ;;
-            2)
-                sudo vim "$file_path"
-                ;;
-            3)
-                sudo nano "$file_path"
-                ;;
-            4)
-                return
-                ;;
-            *)
-                echo -e "${RED}Invalid option!${RESET}"
-                sleep 1
-                ;;
-        esac
-    done
-}
-
-bind9_zones_menu() {
-    while true; do
-        clear
-        echo -e "${CYAN}${BOLD}==================================================${RESET}"
-        echo -e "${CYAN}${BOLD}          BIND9 Zone Files${RESET}"
-        echo -e "${CYAN}${BOLD}==================================================${RESET}\n"
-        
-        # List all zone files
-        zone_files=($ZONES_DIR/db.*)
-        
-        if [ ${#zone_files[@]} -eq 0 ] || [ ! -e "${zone_files[0]}" ]; then
-            echo -e "${RED}No zone files found in $ZONES_DIR${RESET}"
-            echo -e "\n${YELLOW}Press Enter to go back...${RESET}"
-            read
-            return
-        fi
-        
-        # Display zone files
-        local i=1
-        for zone_file in "${zone_files[@]}"; do
-            zone_name=$(basename "$zone_file")
-            echo -e "${GREEN}[$i]${RESET} $zone_name"
-            ((i++))
-        done
-        echo -e "${GREEN}[$i]${RESET} Back\n"
-        echo -e "${CYAN}==================================================${RESET}"
-        echo -en "${YELLOW}Select zone file: ${RESET}"
-        read choice
-        
-        if [ "$choice" -eq "$i" ] 2>/dev/null; then
-            return
-        elif [ "$choice" -ge 1 ] 2>/dev/null && [ "$choice" -lt "$i" ]; then
-            selected_file="${zone_files[$((choice-1))]}"
-            file_action_menu "$selected_file"
-        else
-            echo -e "${RED}Invalid option!${RESET}"
-            sleep 1
-        fi
-    done
-}
-
-bind9_config_menu() {
-    while true; do
-        clear
-        echo -e "${CYAN}${BOLD}==================================================${RESET}"
-        echo -e "${CYAN}${BOLD}          BIND9 Configuration Files${RESET}"
-        echo -e "${CYAN}${BOLD}==================================================${RESET}\n"
-        echo -e "${GREEN}[1]${RESET} named.conf"
-        echo -e "${GREEN}[2]${RESET} named.conf.options"
-        echo -e "${GREEN}[3]${RESET} named.conf.local"
-        echo -e "${GREEN}[4]${RESET} named.conf.default-zones"
-        echo -e "${GREEN}[5]${RESET} Zone files (zones/db.*)"
-        echo -e "${GREEN}[6]${RESET} Back\n"
-        echo -e "${CYAN}==================================================${RESET}"
-        echo -en "${YELLOW}Select file: ${RESET}"
-        read choice
-        
-        case $choice in
-            1) file_action_menu "$NAMED_CONF" ;;
-            2) file_action_menu "$NAMED_CONF_OPTIONS" ;;
-            3) file_action_menu "$NAMED_CONF_LOCAL" ;;
-            4) file_action_menu "$NAMED_CONF_DEFAULT" ;;
-            5) bind9_zones_menu ;;
-            6) return ;;
-            *)
-                echo -e "${RED}Invalid option!${RESET}"
-                sleep 1
-                ;;
-        esac
-    done
-}
-
-check_bind9_config() {
-    clear
-    echo -e "${YELLOW}Testing BIND9 configuration...${RESET}\n"
-    echo -e "${CYAN}==================================================${RESET}"
-    
-    local errors=0
-    
-    # Check main configuration
-    echo -e "${YELLOW}Checking named.conf...${RESET}"
-    if sudo named-checkconf; then
-        echo -e "${GREEN}✓ Main configuration is valid${RESET}\n"
-    else
-        echo -e "${RED}✗ Main configuration has errors${RESET}\n"
-        ((errors++))
-    fi
-    
-    # Check zone files
-    echo -e "${YELLOW}Checking zone files...${RESET}"
-    
-    # Parse named.conf.local for zone definitions
-    while IFS= read -r line; do
-        if [[ $line =~ ^[[:space:]]*zone[[:space:]]+\"([^\"]+)\" ]]; then
-            zone_name="${BASH_REMATCH[1]}"
-            # Get the file path from next lines
-            zone_file=""
-            while IFS= read -r subline; do
-                if [[ $subline =~ file[[:space:]]+\"([^\"]+)\" ]]; then
-                    zone_file="${BASH_REMATCH[1]}"
-                    break
-                fi
-                if [[ $subline =~ \}\; ]]; then
-                    break
-                fi
-            done
-            
-            if [ -n "$zone_file" ]; then
-                # Handle relative paths
-                if [[ ! $zone_file =~ ^/ ]]; then
-                    zone_file="$BIND_DIR/$zone_file"
-                fi
-                
-                echo -en "  Checking zone ${CYAN}$zone_name${RESET}... "
-                if sudo named-checkzone "$zone_name" "$zone_file" > /dev/null 2>&1; then
-                    echo -e "${GREEN}✓${RESET}"
-                else
-                    echo -e "${RED}✗${RESET}"
-                    sudo named-checkzone "$zone_name" "$zone_file"
-                    ((errors++))
-                fi
-            fi
-        fi
-    done < "$NAMED_CONF_LOCAL"
-    
-    echo -e "\n${CYAN}==================================================${RESET}"
-    
-    if [ $errors -eq 0 ]; then
-        echo -e "${GREEN}All checks passed successfully!${RESET}"
-    else
-        echo -e "${RED}Found $errors error(s) in configuration!${RESET}"
-    fi
-    
-    echo -e "\n${YELLOW}Press Enter to continue...${RESET}"
-    read
-}
-
-bind9_menu() {
-    while true; do
-        clear
-        echo -e "${CYAN}${BOLD}==================================================${RESET}"
-        echo -e "${CYAN}${BOLD}          BIND9 Management${RESET}"
-        echo -e "${CYAN}${BOLD}==================================================${RESET}\n"
-        echo -e "${GREEN}[1]${RESET} Restart BIND9 server"
-        echo -e "${GREEN}[2]${RESET} Check BIND9 status"
-        echo -e "${GREEN}[3]${RESET} Configuration files"
-        echo -e "${GREEN}[4]${RESET} Test all configurations"
-        echo -e "${GREEN}[5]${RESET} Back\n"
-        echo -e "${CYAN}==================================================${RESET}"
-        echo -en "${YELLOW}Select option: ${RESET}"
-        read choice
-        
-        case $choice in
-            1)
-                clear
-                echo -e "${YELLOW}Restarting BIND9...${RESET}\n"
-                sudo systemctl restart named
-                if [ $? -eq 0 ]; then
-                    echo -e "${GREEN}BIND9 restarted successfully!${RESET}"
-                else
-                    echo -e "${RED}Failed to restart BIND9!${RESET}"
-                fi
-                echo -e "\n${YELLOW}Press Enter to continue...${RESET}"
-                read
-                ;;
-            2)
-                clear
-                sudo systemctl status named
-                echo -e "\n${YELLOW}Press Enter to continue...${RESET}"
-                read
-                ;;
-            3)
-                bind9_config_menu
-                ;;
-            4)
-                check_bind9_config
-                ;;
-            5)
-                return
-                ;;
-            *)
-                echo -e "${RED}Invalid option!${RESET}"
-                sleep 1
-                ;;
-        esac
-    done
-}
+# Source all modules
+source "$MODULES_DIR/common.sh"
+source "$MODULES_DIR/ssh.sh"
+source "$MODULES_DIR/search.sh"
+source "$MODULES_DIR/bind9.sh"
 
 main_menu() {
     while true; do
         clear
+        show_zak_banner
         echo -e "${CYAN}${BOLD}==================================================${RESET}"
-        echo -e "${CYAN}${BOLD}          ZAK'S NETWORK LAB TOOLS${RESET}"
+        echo -e "${CYAN}${BOLD}          RSG NETWORK LAB TOOLS${RESET}"
         echo -e "${CYAN}${BOLD}==================================================${RESET}\n"
-        echo -e "${GREEN}[1]${RESET} SSH into Lab Gateway (PC-G)"
+        echo -e "${GREEN}[1]${RESET} SSH"
         echo -e "${GREEN}[2]${RESET} Search for files system-wide"
         echo -e "${GREEN}[3]${RESET} BIND9 Management"
         echo -e "${GREEN}[4]${RESET} Exit\n"
@@ -279,41 +26,9 @@ main_menu() {
         read choice
 
         case $choice in
-            1)
-                clear
-                echo -e "${GREEN}Connecting to labgate...${RESET}\n"
-                ssh rsg@labgate
-                ;;
-            2)
-                clear
-                echo -e "${GREEN}==================================================${RESET}"
-                echo -e "${YELLOW}System-wide File Search${RESET}"
-                echo -e "${GREEN}==================================================${RESET}\n"
-                echo -en "${YELLOW}Enter filename pattern: ${RESET}"
-                read pattern
-                
-                if [ -n "$pattern" ]; then
-                    echo -e "\n${CYAN}Searching for: $pattern${RESET}"
-                    echo -e "${CYAN}This may take a moment...${RESET}\n"
-                    
-                    results=$(find / -name "$pattern" 2>/dev/null)
-                    
-                    if [ -n "$results" ]; then
-                        echo -e "${GREEN}Found:${RESET}\n"
-                        echo "$results"
-                    else
-                        echo -e "${RED}No files found matching '$pattern'${RESET}"
-                    fi
-                else
-                    echo -e "${RED}No pattern entered!${RESET}"
-                fi
-                
-                echo -e "\n${YELLOW}Press Enter to return to menu...${RESET}"
-                read
-                ;;
-            3)
-                bind9_menu
-                ;;
+            1) ssh_menu ;;
+            2) search_menu ;;
+            3) bind9_menu ;;
             4)
                 clear
                 echo -e "${CYAN}Goodbye!${RESET}"
@@ -327,6 +42,6 @@ main_menu() {
     done
 }
 
-# Start script
-show_banner
+# Start
+show_welcome
 main_menu
