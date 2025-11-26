@@ -10,6 +10,7 @@ source "$MODULES_DIR/common.sh"
 source "$MODULES_DIR/ssh.sh"
 source "$MODULES_DIR/search.sh"
 source "$MODULES_DIR/bind9.sh"
+source "$MODULES_DIR/dns.sh"
 
 # Update function
 update_rsglab() {
@@ -77,7 +78,8 @@ main_menu() {
         echo -e "${GREEN}[1]${RESET} SSH"
         echo -e "${GREEN}[2]${RESET} Search for files system-wide"
         echo -e "${GREEN}[3]${RESET} BIND9 Management"
-        echo -e "${GREEN}[4]${RESET} Exit\n"
+        echo -e "${GREEN}[4]${RESET} DNS Management"
+        echo -e "${GREEN}[5]${RESET} Exit\n"
         echo -e "${CYAN}==================================================${RESET}"
         echo -en "${YELLOW}Select option: ${RESET}"
         read choice
@@ -86,14 +88,11 @@ main_menu() {
             1) ssh_menu ;;
             2) search_menu ;;
             3) bind9_menu ;;
-            4)
+            4) dns_menu ;;
+            5)
                 clear
                 echo -e "${CYAN}Goodbye!${RESET}"
                 exit 0
-                ;;
-            *)
-                echo -e "${RED}Invalid option!${RESET}"
-                sleep 1
                 ;;
         esac
     done

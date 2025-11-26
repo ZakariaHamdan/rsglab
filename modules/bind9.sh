@@ -18,9 +18,9 @@ file_action_menu() {
         echo -e "${CYAN}${BOLD}==================================================${RESET}"
         echo -e "${CYAN}${BOLD}          File: $file_name${RESET}"
         echo -e "${CYAN}${BOLD}==================================================${RESET}\n"
-        echo -e "${GREEN}[1]${RESET} View with cat"
-        echo -e "${GREEN}[2]${RESET} Edit with vim"
-        echo -e "${GREEN}[3]${RESET} Edit with nano"
+        echo -e "${GREEN}[1]${RESET} cat"
+        echo -e "${GREEN}[2]${RESET} vim"
+        echo -e "${GREEN}[3]${RESET} nano"
         echo -e "${GREEN}[4]${RESET} Back\n"
         echo -e "${CYAN}==================================================${RESET}"
         echo -en "${YELLOW}Select option: ${RESET}"
@@ -48,6 +48,115 @@ file_action_menu() {
                 ;;
         esac
     done
+}
+
+bind9_service_menu() {
+    while true; do
+        clear
+        show_zak_banner
+        echo -e "${CYAN}${BOLD}==================================================${RESET}"
+        echo -e "${CYAN}${BOLD}          BIND9 Service Management${RESET}"
+        echo -e "${CYAN}${BOLD}==================================================${RESET}\n"
+        echo -e "${GREEN}[1]${RESET} Restart BIND9"
+        echo -e "${GREEN}[2]${RESET} Status"
+        echo -e "${GREEN}[3]${RESET} Test configuration"
+        echo -e "${GREEN}[4]${RESET} Back\n"
+        echo -e "${CYAN}==================================================${RESET}"
+        echo -en "${YELLOW}Select option: ${RESET}"
+        read choice
+        
+        case $choice in
+            1)
+                clear
+                echo -e "${YELLOW}Restarting BIND9...${RESET}\n"
+                sudo systemctl restart named
+                if [ $? -eq 0 ]; then
+                    echo -e "${GREEN}BIND9 restarted successfully!${RESET}"
+                else
+                    echo -e "${RED}Failed to restart BIND9!${RESET}"
+                fi
+                echo -e "\n${YELLOW}Press Enter to continue...${RESET}"
+                read
+                ;;
+            2)
+                clear
+                sudo systemctl status named
+                echo -e "\n${YELLOW}Press Enter to continue...${RESET}"
+                read
+                ;;
+            3)
+                check_bind9_config
+                ;;
+            4)
+                return
+                ;;
+            *)
+                echo -e "${RED}Invalid option!${RESET}"
+                sleep 1
+                ;;
+        esac
+    done
+}
+
+check_bind9_config() {
+    clear
+    show_zak_banner
+    echo -e "${YELLOW}Testing BIND9 configuration...${RESET}\n"
+    echo -e "${CYAN}==================================================${RESET}"
+    
+    local errors=0
+    
+    echo -e "${YELLOW}Checking named.conf...${RESET}"
+    if sudo named-checkconf; then
+        echo -e "${GREEN}✓ Main configuration is valid${RESET}\n"
+    else
+        echo -e "${RED}✗ Main configuration has errors${RESET}\n"
+        ((errors++))
+    fi
+    
+    echo -e "${YELLOW}Checking zone files...${RESET}"
+    
+    while IFS= read -r line; do
+        if [[ $line =~ ^[[:space:]]*zone[[:space:]]+\"([^\"]+)\" ]]; then
+            zone_name="${BASH_REMATCH[1]}"
+            zone_file=""
+            while IFS= read -r subline; do
+                if [[ $subline =~ file[[:space:]]+\"([^\"]+)\" ]]; then
+                    zone_file="${BASH_REMATCH[1]}"
+                    break
+                fi
+                if [[ $subline =~ \}\; ]]; then
+                    break
+                fi
+            done
+            
+            if [ -n "$zone_file" ]; then
+                if [[ ! $zone_file =~ ^/ ]]; then
+                    zone_file="$BIND_DIR/$zone_file"
+                fi
+                
+                echo -en "  Checking zone ${CYAN}$zone_name${RESET}... "
+                if sudo named-checkzone "$zone_name" "$zone_file" > /dev/null 2>&1; then
+                    echo -e "${GREEN}✓${RESET}"
+                else
+                    echo -e "${RED}✗${RESET}"
+                    sudo named-checkzone "$zone_name" "$zone_file"
+                    ((errors++))
+                fi
+            fi
+        fi
+    done < "$NAMED_CONF_LOCAL"
+    
+    echo -e "\n${CYAN}==================================================${RESET}"
+    
+    if [ $errors -eq 0 ]; then
+        echo -e "${GREEN}All checks passed successfully!${RESET}"
+    else
+        echo -e "${RED}Found $errors error(s) in configuration!${RESET}"
+    fi
+    
+    echo -e "\n${YELLOW}Press Enter to continue...${RESET}"
+    read
 }
 
 bind9_zones_menu() {
@@ -122,67 +231,6 @@ bind9_config_menu() {
     done
 }
 
-check_bind9_config() {
-    clear
-    show_zak_banner
-    echo -e "${YELLOW}Testing BIND9 configuration...${RESET}\n"
-    echo -e "${CYAN}==================================================${RESET}"
-    
-    local errors=0
-    
-    echo -e "${YELLOW}Checking named.conf...${RESET}"
-    if sudo named-checkconf; then
-        echo -e "${GREEN}✓ Main configuration is valid${RESET}\n"
-    else
-        echo -e "${RED}✗ Main configuration has errors${RESET}\n"
-        ((errors++))
-    fi
-    
-    echo -e "${YELLOW}Checking zone files...${RESET}"
-    
-    while IFS= read -r line; do
-        if [[ $line =~ ^[[:space:]]*zone[[:space:]]+\"([^\"]+)\" ]]; then
-            zone_name="${BASH_REMATCH[1]}"
-            zone_file=""
-            while IFS= read -r subline; do
-                if [[ $subline =~ file[[:space:]]+\"([^\"]+)\" ]]; then
-                    zone_file="${BASH_REMATCH[1]}"
-                    break
-                fi
-                if [[ $subline =~ \}\; ]]; then
-                    break
-                fi
-            done
-            
-            if [ -n "$zone_file" ]; then
-                if [[ ! $zone_file =~ ^/ ]]; then
-                    zone_file="$BIND_DIR/$zone_file"
-                fi
-                
-                echo -en "  Checking zone ${CYAN}$zone_name${RESET}... "
-                if sudo named-checkzone "$zone_name" "$zone_file" > /dev/null 2>&1; then
-                    echo -e "${GREEN}✓${RESET}"
-                else
-                    echo -e "${RED}✗${RESET}"
-                    sudo named-checkzone "$zone_name" "$zone_file"
-                    ((errors++))
-                fi
-            fi
-        fi
-    done < "$NAMED_CONF_LOCAL"
-    
-    echo -e "\n${CYAN}==================================================${RESET}"
-    
-    if [ $errors -eq 0 ]; then
-        echo -e "${GREEN}All checks passed successfully!${RESET}"
-    else
-        echo -e "${RED}Found $errors error(s) in configuration!${RESET}"
-    fi
-    
-    echo -e "\n${YELLOW}Press Enter to continue...${RESET}"
-    read
-}
-
 bind9_menu() {
     while true; do
         clear
@@ -190,43 +238,17 @@ bind9_menu() {
         echo -e "${CYAN}${BOLD}==================================================${RESET}"
         echo -e "${CYAN}${BOLD}          BIND9 Management${RESET}"
         echo -e "${CYAN}${BOLD}==================================================${RESET}\n"
-        echo -e "${GREEN}[1]${RESET} Restart BIND9 server"
-        echo -e "${GREEN}[2]${RESET} Check BIND9 status"
-        echo -e "${GREEN}[3]${RESET} Configuration files"
-        echo -e "${GREEN}[4]${RESET} Test all configurations"
-        echo -e "${GREEN}[5]${RESET} Back\n"
+        echo -e "${GREEN}[1]${RESET} Service Management"
+        echo -e "${GREEN}[2]${RESET} Configuration Files"
+        echo -e "${GREEN}[3]${RESET} Back\n"
         echo -e "${CYAN}==================================================${RESET}"
         echo -en "${YELLOW}Select option: ${RESET}"
         read choice
         
         case $choice in
-            1)
-                clear
-                echo -e "${YELLOW}Restarting BIND9...${RESET}\n"
-                sudo systemctl restart named
-                if [ $? -eq 0 ]; then
-                    echo -e "${GREEN}BIND9 restarted successfully!${RESET}"
-                else
-                    echo -e "${RED}Failed to restart BIND9!${RESET}"
-                fi
-                echo -e "\n${YELLOW}Press Enter to continue...${RESET}"
-                read
-                ;;
-            2)
-                clear
-                sudo systemctl status named
-                echo -e "\n${YELLOW}Press Enter to continue...${RESET}"
-                read
-                ;;
-            3)
-                bind9_config_menu
-                ;;
-            4)
-                check_bind9_config
-                ;;
-            5)
-                return
-                ;;
+            1) bind9_service_menu ;;
+            2) bind9_config_menu ;;
+            3) return ;;
             *)
                 echo -e "${RED}Invalid option!${RESET}"
                 sleep 1
