@@ -32,6 +32,7 @@ dns_service_menu() {
                 clear
                 echo -e "${YELLOW}Restarting systemd-resolved...${RESET}\n"
                 sudo systemctl restart systemd-resolved
+                echo "sudo systemctl restart systemd-resolved"
                 if [ $? -eq 0 ]; then
                     echo -e "${GREEN}systemd-resolved restarted successfully!${RESET}"
                 else
