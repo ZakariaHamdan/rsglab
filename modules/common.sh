@@ -43,8 +43,8 @@ get_menu_choice() {
         sleep 0.3
         echo "$choice"
     else
-        # Normal prompt
-        choice=$(get_menu_choice)
+        # Normal prompt - FIX: was calling itself recursively!
+        read choice
         
         # Check if it contains multiple commands
         if [[ $choice =~ [,.[:space:]] ]]; then

@@ -23,16 +23,19 @@ dns_service_menu() {
         
         case $choice in
             1)
+                clear_queue
                 clear
+                echo -e "${CYAN}Running: sudo systemctl status systemd-resolved${RESET}\n"
                 sudo systemctl status systemd-resolved
                 echo -e "\n${YELLOW}Press Enter to continue...${RESET}"
                 read
                 ;;
             2)
+                clear_queue
                 clear
-                echo -e "${YELLOW}Restarting systemd-resolved...${RESET}\n"
+                echo -e "${YELLOW}Restarting systemd-resolved...${RESET}"
+                echo -e "${CYAN}Running: sudo systemctl restart systemd-resolved${RESET}\n"
                 sudo systemctl restart systemd-resolved
-                echo "sudo systemctl restart systemd-resolved"
                 if [ $? -eq 0 ]; then
                     echo -e "${GREEN}systemd-resolved restarted successfully!${RESET}"
                 else
@@ -42,8 +45,10 @@ dns_service_menu() {
                 read
                 ;;
             3)
+                clear_queue
                 clear
-                echo -e "${YELLOW}Flushing DNS cache...${RESET}\n"
+                echo -e "${YELLOW}Flushing DNS cache...${RESET}"
+                echo -e "${CYAN}Running: sudo systemd-resolve --flush-caches${RESET}\n"
                 sudo systemd-resolve --flush-caches
                 if [ $? -eq 0 ]; then
                     echo -e "${GREEN}DNS cache flushed successfully!${RESET}"
@@ -57,7 +62,8 @@ dns_service_menu() {
                 return
                 ;;
             *)
-                echo -e "${RED}Invalid option!${RESET}"
+                echo -e "${RED}Invalid option: $choice${RESET}"
+                clear_queue
                 sleep 1
                 ;;
         esac
@@ -87,7 +93,8 @@ dns_config_menu() {
             4) file_action_menu "$HOSTS_FILE" ;;
             5) return ;;
             *)
-                echo -e "${RED}Invalid option!${RESET}"
+                echo -e "${RED}Invalid option: $choice${RESET}"
+                clear_queue
                 sleep 1
                 ;;
         esac
@@ -113,10 +120,11 @@ dns_testing_menu() {
         
         case $choice in
             1)
+                clear_queue
                 clear
                 echo -e "${YELLOW}Testing common domains...${RESET}\n"
                 for domain in labgate.lab.local google.com cloudflare.com; do
-                    echo -e "${CYAN}Testing $domain:${RESET}"
+                    echo -e "${CYAN}Running: dig +short $domain${RESET}"
                     dig +short $domain
                     echo ""
                 done
@@ -124,28 +132,33 @@ dns_testing_menu() {
                 read
                 ;;
             2)
+                clear_queue
                 clear
                 echo -en "${YELLOW}Enter domain to test: ${RESET}"
                 read domain
                 if [ -n "$domain" ]; then
                     clear
+                    echo -e "${CYAN}Running: dig $domain${RESET}\n"
                     dig $domain
                     echo -e "\n${YELLOW}Press Enter to continue...${RESET}"
                     read
                 fi
                 ;;
             3)
+                clear_queue
                 clear
                 echo -en "${YELLOW}Enter domain for DNS trace: ${RESET}"
                 read domain
                 if [ -n "$domain" ]; then
                     clear
+                    echo -e "${CYAN}Running: dig +trace $domain${RESET}\n"
                     dig +trace $domain
                     echo -e "\n${YELLOW}Press Enter to continue...${RESET}"
                     read
                 fi
                 ;;
             4)
+                clear_queue
                 clear
                 echo -en "${YELLOW}Enter nameserver IP: ${RESET}"
                 read ns
@@ -153,13 +166,16 @@ dns_testing_menu() {
                 read domain
                 if [ -n "$ns" ] && [ -n "$domain" ]; then
                     clear
+                    echo -e "${CYAN}Running: dig @$ns $domain${RESET}\n"
                     dig @$ns $domain
                     echo -e "\n${YELLOW}Press Enter to continue...${RESET}"
                     read
                 fi
                 ;;
             5)
+                clear_queue
                 clear
+                echo -e "${CYAN}Running: systemd-resolve --status | grep \"DNS Servers\" -A 5${RESET}\n"
                 echo -e "${YELLOW}Current DNS configuration:${RESET}\n"
                 systemd-resolve --status | grep "DNS Servers" -A 5
                 echo -e "\n${YELLOW}Press Enter to continue...${RESET}"
@@ -169,7 +185,8 @@ dns_testing_menu() {
                 return
                 ;;
             *)
-                echo -e "${RED}Invalid option!${RESET}"
+                echo -e "${RED}Invalid option: $choice${RESET}"
+                clear_queue
                 sleep 1
                 ;;
         esac
@@ -197,7 +214,8 @@ dns_menu() {
             3) dns_testing_menu ;;
             4) return ;;
             *)
-                echo -e "${RED}Invalid option!${RESET}"
+                echo -e "${RED}Invalid option: $choice${RESET}"
+                clear_queue
                 sleep 1
                 ;;
         esac
