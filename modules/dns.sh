@@ -19,7 +19,7 @@ dns_service_menu() {
         echo -e "${GREEN}[4]${RESET} Back\n"
         echo -e "${CYAN}==================================================${RESET}"
         echo -en "${YELLOW}Select option: ${RESET}"
-        read choice
+        choice=$(get_menu_choice)
         
         case $choice in
             1)
@@ -78,7 +78,7 @@ dns_config_menu() {
         echo -e "${GREEN}[5]${RESET} Back\n"
         echo -e "${CYAN}==================================================${RESET}"
         echo -en "${YELLOW}Select file: ${RESET}"
-        read choice
+        choice=$(get_menu_choice)
         
         case $choice in
             1) file_action_menu "$RESOLV_CONF" ;;
@@ -109,7 +109,7 @@ dns_testing_menu() {
         echo -e "${GREEN}[6]${RESET} Back\n"
         echo -e "${CYAN}==================================================${RESET}"
         echo -en "${YELLOW}Select option: ${RESET}"
-        read choice
+        choice=$(get_menu_choice)
         
         case $choice in
             1)
@@ -189,7 +189,7 @@ dns_menu() {
         echo -e "${GREEN}[4]${RESET} Back\n"
         echo -e "${CYAN}==================================================${RESET}"
         echo -en "${YELLOW}Select option: ${RESET}"
-        read choice
+        choice=$(get_menu_choice)
         
         case $choice in
             1) dns_service_menu ;;

@@ -12,17 +12,20 @@ ssh_menu() {
         echo -e "${GREEN}[3]${RESET} Back\n"
         echo -e "${CYAN}==================================================${RESET}"
         echo -en "${YELLOW}Select option: ${RESET}"
-        read choice
+        choice=$(get_menu_choice)
         
         case $choice in
             1)
+                clear_queue
                 clear
                 echo -e "${GREEN}Connecting to labgate...${RESET}\n"
+                echo -e "ssh rsg@labgate"
                 ssh rsg@labgate
                 ;;
             2)
                 clear
                 echo -e "${GREEN}Connecting to labmngr...${RESET}\n"
+                echo -e "ssh rsg@labmngr"
                 ssh soc@labmngr
                 ;;
             3)

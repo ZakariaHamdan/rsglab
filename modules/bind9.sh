@@ -24,26 +24,31 @@ file_action_menu() {
         echo -e "${GREEN}[4]${RESET} Back\n"
         echo -e "${CYAN}==================================================${RESET}"
         echo -en "${YELLOW}Select option: ${RESET}"
-        read choice
+        
+        choice=$(get_menu_choice)
         
         case $choice in
             1)
+                clear_queue  # Clear queue before interactive action
                 clear
                 cat "$file_path"
                 echo -e "\n${YELLOW}Press Enter to continue...${RESET}"
                 read
                 ;;
             2)
+                clear_queue  # Clear queue before interactive action
                 sudo vim "$file_path"
                 ;;
             3)
+                clear_queue  # Clear queue before interactive action
                 sudo nano "$file_path"
                 ;;
             4)
                 return
                 ;;
             *)
-                echo -e "${RED}Invalid option!${RESET}"
+                echo -e "${RED}Invalid option: $choice${RESET}"
+                clear_queue
                 sleep 1
                 ;;
         esac
@@ -63,7 +68,7 @@ bind9_service_menu() {
         echo -e "${GREEN}[4]${RESET} Back\n"
         echo -e "${CYAN}==================================================${RESET}"
         echo -en "${YELLOW}Select option: ${RESET}"
-        read choice
+        choice=$(get_menu_choice)
         
         case $choice in
             1)
@@ -98,65 +103,38 @@ bind9_service_menu() {
     done
 }
 
-check_bind9_config() {
-    clear
-    show_zak_banner
-    echo -e "${YELLOW}Testing BIND9 configuration...${RESET}\n"
-    echo -e "${CYAN}==================================================${RESET}"
-    
-    local errors=0
-    
-    echo -e "${YELLOW}Checking named.conf...${RESET}"
-    if sudo named-checkconf; then
-        echo -e "${GREEN}✓ Main configuration is valid${RESET}\n"
-    else
-        echo -e "${RED}✗ Main configuration has errors${RESET}\n"
-        ((errors++))
-    fi
-    
-    echo -e "${YELLOW}Checking zone files...${RESET}"
-    
-    while IFS= read -r line; do
-        if [[ $line =~ ^[[:space:]]*zone[[:space:]]+\"([^\"]+)\" ]]; then
-            zone_name="${BASH_REMATCH[1]}"
-            zone_file=""
-            while IFS= read -r subline; do
-                if [[ $subline =~ file[[:space:]]+\"([^\"]+)\" ]]; then
-                    zone_file="${BASH_REMATCH[1]}"
-                    break
-                fi
-                if [[ $subline =~ \}\; ]]; then
-                    break
-                fi
-            done
-            
-            if [ -n "$zone_file" ]; then
-                if [[ ! $zone_file =~ ^/ ]]; then
-                    zone_file="$BIND_DIR/$zone_file"
-                fi
-                
-                echo -en "  Checking zone ${CYAN}$zone_name${RESET}... "
-                if sudo named-checkzone "$zone_name" "$zone_file" > /dev/null 2>&1; then
-                    echo -e "${GREEN}✓${RESET}"
-                else
-                    echo -e "${RED}✗${RESET}"
-                    sudo named-checkzone "$zone_name" "$zone_file"
-                    ((errors++))
-                fi
-            fi
-        fi
-    done < "$NAMED_CONF_LOCAL"
-    
-    echo -e "\n${CYAN}==================================================${RESET}"
-    
-    if [ $errors -eq 0 ]; then
-        echo -e "${GREEN}All checks passed successfully!${RESET}"
-    else
-        echo -e "${RED}Found $errors error(s) in configuration!${RESET}"
-    fi
-    
-    echo -e "\n${YELLOW}Press Enter to continue...${RESET}"
-    read
+bind9_config_menu() {
+    while true; do
+        clear
+        show_zak_banner
+        echo -e "${CYAN}${BOLD}==================================================${RESET}"
+        echo -e "${CYAN}${BOLD}          BIND9 Configuration Files${RESET}"
+        echo -e "${CYAN}${BOLD}==================================================${RESET}\n"
+        echo -e "${GREEN}[1]${RESET} named.conf"
+        echo -e "${GREEN}[2]${RESET} named.conf.options"
+        echo -e "${GREEN}[3]${RESET} named.conf.local"
+        echo -e "${GREEN}[4]${RESET} named.conf.default-zones"
+        echo -e "${GREEN}[5]${RESET} Zone files (zones/db.*)"
+        echo -e "${GREEN}[6]${RESET} Back\n"
+        echo -e "${CYAN}==================================================${RESET}"
+        echo -en "${YELLOW}Select file: ${RESET}"
+        
+        choice=$(get_menu_choice)
+        
+        case $choice in
+            1) file_action_menu "$NAMED_CONF" ;;
+            2) file_action_menu "$NAMED_CONF_OPTIONS" ;;
+            3) file_action_menu "$NAMED_CONF_LOCAL" ;;
+            4) file_action_menu "$NAMED_CONF_DEFAULT" ;;
+            5) bind9_zones_menu ;;
+            6) return ;;
+            *)
+                echo -e "${RED}Invalid option: $choice${RESET}"
+                clear_queue
+                sleep 1
+                ;;
+        esac
+    done
 }
 
 bind9_zones_menu() {
@@ -185,7 +163,7 @@ bind9_zones_menu() {
         echo -e "${GREEN}[$i]${RESET} Back\n"
         echo -e "${CYAN}==================================================${RESET}"
         echo -en "${YELLOW}Select zone file: ${RESET}"
-        read choice
+        choice=$(get_menu_choice)
         
         if [ "$choice" -eq "$i" ] 2>/dev/null; then
             return
@@ -214,7 +192,7 @@ bind9_config_menu() {
         echo -e "${GREEN}[6]${RESET} Back\n"
         echo -e "${CYAN}==================================================${RESET}"
         echo -en "${YELLOW}Select file: ${RESET}"
-        read choice
+        choice=$(get_menu_choice)
         
         case $choice in
             1) file_action_menu "$NAMED_CONF" ;;
@@ -243,7 +221,7 @@ bind9_menu() {
         echo -e "${GREEN}[3]${RESET} Back\n"
         echo -e "${CYAN}==================================================${RESET}"
         echo -en "${YELLOW}Select option: ${RESET}"
-        read choice
+        choice=$(get_menu_choice)
         
         case $choice in
             1) bind9_service_menu ;;

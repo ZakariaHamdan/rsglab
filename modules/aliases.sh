@@ -179,7 +179,7 @@ aliases_menu() {
         echo -e "${GREEN}[4]${RESET} Back\n"
         echo -e "${CYAN}==================================================${RESET}"
         echo -en "${YELLOW}Select option: ${RESET}"
-        read choice
+        choice=$(get_menu_choice)
         
         case $choice in
             1) view_aliases ;;

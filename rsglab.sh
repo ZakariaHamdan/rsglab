@@ -84,8 +84,9 @@ main_menu() {
         echo -e "${GREEN}[6]${RESET} Exit\n"
         echo -e "${CYAN}==================================================${RESET}"
         echo -en "${YELLOW}Select option: ${RESET}"
-        read choice
-
+        
+        choice=$(get_menu_choice)
+        
         case $choice in
             1) ssh_menu ;;
             2) search_menu ;;
@@ -96,6 +97,11 @@ main_menu() {
                 clear
                 echo -e "${CYAN}Goodbye!${RESET}"
                 exit 0
+                ;;
+            *)
+                echo -e "${RED}Invalid option: $choice${RESET}"
+                clear_queue
+                sleep 1
                 ;;
         esac
     done
